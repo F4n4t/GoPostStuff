@@ -169,7 +169,7 @@ func Spawner(filenames []string) {
 				for article := range achan {
 					err := conn.Post(article.Body, Config.Global.ChunkSize)
 					if err != nil {
-						log.Warning("[%s:%02d] Post error: %s", name, connID, err)
+						log.Fatalf("[%s:%02d] Post error: %s", name, connID, err)
 					} else {
 						nzbinfo[article.FileName] = article.NzbData
 						segs[article.FileName] = append(segs[article.FileName], article.Segment)
