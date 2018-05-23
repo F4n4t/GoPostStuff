@@ -26,12 +26,12 @@ Installation
 1. Initalise a directory to store Go files:
 
         mkdir ~/go
-        export GOPATH="~/go"
+        export GOPATH=~/go
 
 1.  Get and install GoPostStuff - this will make a ~/go/bin/gopoststuff binary:
 
-        go get github.com/izolight/gopoststuff
-        go install github.com/izolight/gopoststuff
+        go get github.com/f4n4t/gopoststuff
+        go install github.com/f4n4t/gopoststuff
 
 3. Copy sample.conf to ~/.gopoststuff.conf and edit the options as appropriate.
 
