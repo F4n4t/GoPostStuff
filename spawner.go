@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"github.com/dustin/go-humanize"
 )
 
 type FileData struct {
@@ -27,6 +28,8 @@ func Spawner(filenames []string) {
 	var altnzbpath string
 	nzbinfo := make(map[string]NzbFile, 0)
 	segs := make(map[string][]NzbSegment, 0)
+
+	var mutex = &sync.Mutex{}
 
 	log.Debug("Spawner started")
 
@@ -49,7 +52,7 @@ func Spawner(filenames []string) {
 		totalBytes += int64(fd.size)
 	}
 	totalMB := float64(totalBytes) / 1024 / 1024
-	log.Info("Found %d file(s) totalling %.1fMiB", len(files), totalMB)
+	log.Infof("Found %d file(s) totalling %.1fMiB", len(files), totalMB)
 
 	// Make a channel to stuff TimeDatas into
 	tdchan := make(chan *simplenntp.TimeData, 100000)
@@ -65,7 +68,7 @@ func Spawner(filenames []string) {
 	}
 	// Iterate over configured servers
 	for name, server := range serverList {
-		log.Info("[%s] Starting %d connections", name, server.Connections)
+		log.Infof("[%s] Starting %d connections", name, server.Connections)
 
 		// Make a channel to stuff Articles into
 		achan := make(chan *Article, server.Connections)
@@ -78,7 +81,7 @@ func Spawner(filenames []string) {
 		go func(c chan *Article, files []FileData) {
 			defer wg.Done()
 
-			log.Debug("[%s] Article generator started", name)
+			log.Debugf("[%s] Article generator started", name)
 
 			mc := NewMmapCache()
 			for filenum, fd := range files {
@@ -128,7 +131,7 @@ func Spawner(filenames []string) {
 					if err != nil {
 						log.Fatalf("CloseFile error: %s", err)
 					}
-					log.Debug("[%s] Closed file %s", name, fd.path)
+					log.Debugf("[%s] Closed file %s", name, fd.path)
 				}
 			}
 
@@ -146,21 +149,21 @@ func Spawner(filenames []string) {
 				defer wg.Done()
 
 				// Connect
-				log.Debug("[%s:%02d] Connecting...", name, connID)
+				log.Debugf("[%s:%02d] Connecting...", name, connID)
 				conn, err := simplenntp.Dial(server.Address, server.Port, server.TLS, server.InsecureSSL, tdchan)
 				if err != nil {
 					log.Fatalf("[%s] Error while connecting: %s", name, err)
 				}
-				log.Debug("[%s:%02d] Connected", name, connID)
+				log.Debugf("[%s:%02d] Connected", name, connID)
 
 				// Authenticate if required
 				if len(server.Username) > 0 {
-					log.Debug("[%s:%02d] Authenticating...", name, connID)
+					log.Debugf("[%s:%02d] Authenticating...", name, connID)
 					err := conn.Authenticate(server.Username, server.Password)
 					if err != nil {
 						log.Fatalf("[%s:%02d] Error while authenticating: %s", name, connID, err)
 					}
-					log.Debug("[%s:%02d] Authenticated", name, connID)
+					log.Debugf("[%s:%02d] Authenticated", name, connID)
 				}
 
 				t := &Totals{start: time.Now()}
@@ -171,8 +174,10 @@ func Spawner(filenames []string) {
 					if err != nil {
 						log.Fatalf("[%s:%02d] Post error: %s", name, connID, err)
 					} else {
+						mutex.Lock()
 						nzbinfo[article.FileName] = article.NzbData
 						segs[article.FileName] = append(segs[article.FileName], article.Segment)
+						mutex.Unlock()
 					}
 					t.bytes += int64(len(article.Body))
 				}
@@ -182,10 +187,10 @@ func Spawner(filenames []string) {
 				tchan <- t
 
 				// Close the connection
-				log.Debug("[%s:%02d] Closing connection", name, connID)
+				log.Debugf("[%s:%02d] Closing connection", name, connID)
 				err = conn.Quit()
 				if err != nil {
-					log.Warning("[%s:%02d] Error while closing connection: %s", name, connID, err)
+					log.Warningf("[%s:%02d] Error while closing connection: %s", name, connID, err)
 				}
 			}(achan, tchan)
 		}
@@ -211,10 +216,10 @@ func Spawner(filenames []string) {
 
 			// Calculate and log the result
 			dur := maxEnd.Sub(minStart)
-			speed, speedUnit := prettySize(float64(totalBytes) / dur.Seconds())
+			speed := float64(totalBytes) / dur.Seconds()
 			totalMB := float64(totalBytes) / 1024 / 1024
 
-			log.Info("[%s] Posted %.1fMiB in %s at %.1f%s/s", name, totalMB, dur.String(), speed, speedUnit)
+			log.Infof("[%s] Posted %.1fMiB in %s at %s/s", name, totalMB, dur.String(), humanize.Bytes(uint64(speed)))
 		}(tchan)
 	}
 
@@ -236,9 +241,9 @@ func Spawner(filenames []string) {
 	}
 
 	if _, err := os.Stat(nzbpath); err == nil {
-		log.Warning("Nzbfile already exists: %s", nzbpath)
+		log.Warningf("Nzbfile already exists: %s", nzbpath)
 		nzbpath = fmt.Sprintf("gps-%d_%s.nzb", time.Now().Unix(), altnzbpath)
-		log.Info("Using alternative filename: %s", nzbpath)
+		log.Infof("Using alternative filename: %s", nzbpath)
 	}
 	nzb := Nzb{}
 
@@ -260,9 +265,9 @@ func Spawner(filenames []string) {
 
 	err := CreateNzb(nzbpath, &nzb)
 	if err != nil {
-		log.Warning("Error while creating Nzb: %s", err)
+		log.Warningf("Error while creating Nzb: %s", err)
 	}
-	log.Info("Generated Nzb file: %s", nzbpath)
+	log.Infof("Generated Nzb file: %s", nzbpath)
 	statusTicker.Stop()
 }
 

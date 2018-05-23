@@ -80,6 +80,7 @@ func main() {
 	}
 
 	var format = logging.MustStringFormatter(" %{level: -8s} %{message}")
+
 	// Set up logging
 	if *verboseFlag {
 		format = logging.MustStringFormatter(" %{level: -8s} %{shortfile} %{message}")
@@ -127,7 +128,7 @@ func main() {
 		cfgFile = filepath.Join(u.HomeDir, ".gopoststuff.conf")
 	}
 
-	log.Debug("Reading config from %s", cfgFile)
+	log.Debugf("Reading config from %s", cfgFile)
 
 	err := gcfg.ReadFileInto(&Config, cfgFile)
 	if err != nil {
@@ -143,7 +144,7 @@ func main() {
 	if *allCpuFlag {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-	log.Info("Using %d/%d CPUs", runtime.GOMAXPROCS(0), runtime.NumCPU())
+	log.Infof("Using %d/%d CPUs", runtime.GOMAXPROCS(0), runtime.NumCPU())
 
 	// Set up CPU profiling
 	if *cpuProfileFlag != "" {
@@ -160,6 +161,6 @@ func main() {
 	Spawner(flag.Args())
 
 	if *cpuProfileFlag != "" {
-		log.Info("CPU profiling data saved to %s", *cpuProfileFlag)
+		log.Infof("CPU profiling data saved to %s", *cpuProfileFlag)
 	}
 }

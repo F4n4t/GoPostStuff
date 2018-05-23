@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/izolight/gopoststuff/simplenntp"
+	"github.com/f4n4t/gopoststuff/simplenntp"
 	"time"
+	"github.com/dustin/go-humanize"
 )
 
 func StatusLogger(ticker *time.Ticker, tdchan chan *simplenntp.TimeData) {
@@ -43,16 +44,14 @@ func StatusLogger(ticker *time.Ticker, tdchan chan *simplenntp.TimeData) {
 				totalBytes += td.Bytes
 			}
 
-			//speed := float64(totalBytes) / float64(active)
-			//speed := float64(totalBytes) / float64(active) / 1024
-			speed, speedUnit := prettySize(float64(totalBytes) / float64(active))
+			speed := float64(totalBytes) / float64(active)
 
 			// Total posted
 			posted := float64(totalPosted) / 1024 / 1024
 
 			// Print it
 			//fmt.Printf("Posted \033[1m%.1f\033[0mMiB - Current speed: \033[1m%.1f\033[0mKiB/s             \r", posted, speed)
-			fmt.Printf("Posted \033[1m%.1f\033[0mMiB - Current speed: \033[1m%.1f\033[0m%s/s             \r", posted, speed, speedUnit)
+			fmt.Printf("Posted \033[1m%.1f\033[0mMiB - Current speed: \033[1m%s/s             \r", posted, humanize.Bytes(uint64(speed)))
 
 			//log.Debug("Current speed: %.1fKB/s", speed)
 		}
@@ -69,23 +68,4 @@ func StatusLogger(ticker *time.Ticker, tdchan chan *simplenntp.TimeData) {
 
 		tds = tds[start:]
 	}
-}
-
-func prettySize(b float64) (nb float64, nu string) {
-	units := make(map[string]float64)
-	units["B"] = 0
-	units["KB"] = 1024
-	units["MB"] = 1024 * 1024
-	units["GB"] = 1024 * 1024 * 1024
-	units["TB"] = 1024 * 1024 * 1024 * 1024
-
-	for k, v := range units {
-		tspeed := b / v
-		if tspeed >= 10.0 && tspeed < 100.0 {
-			nb = tspeed
-			nu = k
-			break
-		}
-	}
-	return nb, nu
 }

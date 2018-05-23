@@ -72,7 +72,7 @@ func NewArticle(p []byte, data *ArticleData, subject string) *Article {
     // yEnc part line
     buf.WriteString(fmt.Sprintf("=ypart begin=%d end=%d\r\n", data.PartBegin+1, data.PartEnd))
 
-    //log.Debug("%+v", buf)
+    //log.Debugf("%+v", buf)
     // Encoded data
     yencode.Encode(p, buf)
     // yEnc end line
